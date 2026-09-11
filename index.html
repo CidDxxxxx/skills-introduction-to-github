@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>《SAVE》Demo 0.4 · 纯文字版</title>
+<style>
+:root{
+  --bg:#0b0e13; --ink:#e9edf2; --muted:#7f8997; --muted2:#9aa4b0;
+  --line:rgba(255,255,255,.12); --soft:rgba(255,255,255,.05);
+  --serif:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+button{font:inherit;color:inherit}
+.hidden{display:none!important}
+
+/* ===== 舞台 ===== */
+#stage{position:relative;min-height:100vh;display:flex;flex-direction:column;overflow:hidden;
+  background:linear-gradient(160deg,var(--m0,#0b0e13),var(--m1,#0f141a));
+  transition:background 1s ease}
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0}
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 90% at 50% 0%,transparent 55%,rgba(0,0,0,.5) 100%)}
+/* mood 配色 */
+.mood-rain{--m0:#0b1119;--m1:#16202e;--accent:#8fb6d0}
+.mood-night{--m0:#0b0d12;--m1:#1a120c;--accent:#d0b48a}
+.mood-store{--m0:#0f1419;--m1:#151b21;--accent:#aebccb}
+.mood-glitch{--m0:#0a0d12;--m1:#160f1a;--accent:#e08a8a}
+/* rain 纹理 */
+.mood-rain::before{opacity:.22;
+  background-image:linear-gradient(105deg,transparent 44%,rgba(160,200,230,.22) 50%,transparent 56%);
+  background-size:10px 16px;animation:rain 1.3s linear infinite}
+@keyframes rain{from{background-position:0 0}to{background-position:-46px 130px}}
+/* glitch 扫描线 */
+.mood-glitch::before{opacity:.35;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px)}
+
+/* ===== 顶栏 ===== */
+.top{position:relative;z-index:2;height:58px;flex:none;display:flex;align-items:center;
+  justify-content:space-between;padding:0 26px;border-bottom:1px solid var(--line);
+  color:var(--muted);font-size:12px;letter-spacing:.28em}
+.top .logo{color:#fff;font-weight:600;letter-spacing:.4em}
+.top .run{letter-spacing:.14em}
+
+/* ===== 场景区 ===== */
+.scene{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;padding:0 clamp(20px,6vw,72px)}
+.chapter{margin:26px 0 0;color:var(--accent);font-size:12px;letter-spacing:.22em;min-height:1.2em}
+.narration{flex:1;display:flex;align-items:center;justify-content:center;
+  max-width:720px;margin:0 auto;width:100%;text-align:left;
+  font-family:var(--serif);font-size:clamp(16px,1.9vw,19px);line-height:2.15;color:#d7dbe1;
+  white-space:pre-wrap;text-shadow:0 2px 18px rgba(0,0,0,.5)}
+.narration .reveal{animation:rise .7s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ===== 对话框 ===== */
+.dialog{flex:none;max-width:760px;width:100%;margin:0 auto 26px;
+  background:linear-gradient(180deg,rgba(10,14,20,.82),rgba(8,11,16,.92));
+  border:1px solid var(--line);border-radius:16px;padding:20px 24px 16px;
+  box-shadow:0 22px 60px rgba(0,0,0,.55);backdrop-filter:blur(10px)}
+.who{font-size:13px;letter-spacing:.14em;color:var(--accent);margin-bottom:9px;min-height:1.2em}
+.who.self{color:#d9c9a8}
+.who.sys{color:#e08a8a;font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em}
+.line{font-size:clamp(17px,2vw,19px);line-height:1.9;white-space:pre-wrap;min-height:60px;color:#eef1f5}
+.line.typing::after{content:"▍";opacity:.7;animation:blink 1s steps(2) infinite;margin-left:1px}
+@keyframes blink{50%{opacity:0}}
+.choices{display:grid;gap:9px;margin-top:14px}
+.choice,.continue{border:1px solid var(--line);background:var(--soft);color:#e7ebf0;border-radius:11px;
+  padding:12px 16px;text-align:left;cursor:pointer;transition:.18s;font-size:15px;line-height:1.6}
+.choice:hover,.continue:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);transform:translateY(-1px)}
+.choice::before{content:"›";color:var(--accent);margin-right:10px}
+.continue{text-align:center;color:var(--muted2)}
+.continue::after{content:"▸";margin-left:8px}
+.controls{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;border-top:1px solid rgba(255,255,255,.06);padding-top:12px}
+.btn{border:1px solid var(--line);background:transparent;color:var(--muted2);border-radius:8px;
+  padding:7px 12px;font-size:12px;letter-spacing:.08em;cursor:pointer;transition:.15s}
+.btn:hover{background:var(--soft);color:#e7ebf0}
+
+/* ===== 系统提示(读档阈值) ===== */
+.syshint{position:fixed;left:50%;bottom:34%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;
+  color:#e08a8a;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;letter-spacing:.1em;
+  opacity:0;transition:opacity .6s;text-shadow:1px 0 rgba(224,138,138,.6),-1px 0 rgba(122,208,224,.5)}
+.syshint.show{opacity:1}
+
+/* ===== 标题屏 ===== */
+#titleScreen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;background:linear-gradient(160deg,#0b0d12,#17100d);padding:24px}
+#titleScreen .big{font-size:clamp(54px,11vw,104px);letter-spacing:.42em;font-weight:300;color:#f2f4f7}
+#titleScreen .sub{margin-top:22px;color:var(--muted);font-size:15px;letter-spacing:.2em;line-height:2}
+#titleScreen .hint{margin-top:10px;color:#6b7480;font-size:12px;letter-spacing:.12em}
+.title-actions{display:flex;gap:12px;margin-top:44px}
+.title-actions .btn{font-size:14px;padding:11px 26px;letter-spacing:.2em}
+
+/* ===== 弹窗 ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;
+  justify-content:center;padding:18px;z-index:20}
+.overlay.hidden{display:none}
+.modal{width:min(860px,100%);max-height:90vh;overflow:auto;background:#0c1118f2;border:1px solid var(--line);
+  border-radius:16px;box-shadow:0 30px 100px #000;padding:22px}
+.modalhead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:15px}
+.modal h2{font-weight:500;margin:0;font-size:18px;letter-spacing:.06em}
+.muted{color:#8f99a5;font-size:12px;line-height:1.7;margin-top:4px}
+.slots{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.slot{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);border-radius:11px;padding:11px;
+  display:grid;grid-template-columns:74px 1fr auto;gap:11px;align-items:center}
+.thumb{width:74px;height:48px;border-radius:7px}
+.slot strong{font-size:13px}
+.slot small{display:block;color:#929ba7;line-height:1.65;font-size:10px}
+.slot button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#e6e9ed;
+  border-radius:7px;padding:7px 10px;font-size:11px;cursor:pointer}
+.slot button:hover{background:rgba(255,255,255,.14)}
+.empty{opacity:.5}
+.namebox{width:min(430px,100%)}
+.namebox input{width:100%;margin-top:12px;background:#070a0e;border:1px solid rgba(255,255,255,.2);color:#fff;
+  border-radius:9px;padding:13px;outline:none;font-size:15px}
+.name-actions{display:flex;justify-content:flex-end;margin-top:14px}
+.primary{background:#e7eaee!important;color:#11151b!important;border-color:#e7eaee!important}
+
+/* ===== 历史记录 ===== */
+.historybox{width:min(720px,100%)}
+.histlist{max-height:64vh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-right:6px}
+.hist-ch{color:var(--accent);font-size:11px;letter-spacing:.18em;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+.hist-ch:first-child{margin-top:0;padding-top:0;border-top:0}
+.hist-item{display:flex;flex-direction:column;gap:2px}
+.hist-nar{color:#9aa4b0;font-size:13px;line-height:1.7;white-space:pre-wrap}
+.hist-who{font-size:12px;letter-spacing:.12em;color:var(--accent);margin-top:6px}
+.hist-who.self{color:#d9c9a8}
+.hist-who.sys{color:#e08a8a;font-family:ui-monospace,Menlo,Consolas,monospace}
+.hist-line{color:#e7ebf0;font-size:14px;line-height:1.75;white-space:pre-wrap}
+
+@media(max-width:640px){
+  .top{padding:0 16px}.scene{padding:0 14px}.chapter{margin-top:18px}
+  .dialog{margin:0 6px 14px;padding:16px 16px 13px}
+  .narration{font-size:16px}
+  .slots{grid-template-columns:1fr}
+  .slot{grid-template-columns:64px 1fr}.thumb{width:64px;height:42px}
+  .slot>div:last-child{grid-column:2}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<div id="stage" class="mood-night">
+  <header class="top"><div class="logo">S A V E</div><div class="run" id="run"></div></header>
+  <main class="scene">
+    <div class="chapter" id="chapter"></div>
+    <div class="narration" id="narration"></div>
+    <div class="dialog">
+      <div class="who" id="who"></div>
+      <div class="line" id="line"></div>
+      <div class="choices" id="choices"></div>
+      <div class="controls">
+        <button class="btn" id="btnHistory">历史</button>
+        <button class="btn" id="btnRestart">重新开始</button>
+      </div>
+    </div>
+  </main>
+  <div class="syshint" id="syshint"></div>
+</div>
+
+<div id="titleScreen" class="hidden">
+  <div class="big">SAVE</div>
+  <div class="sub">一个关于相遇,和记忆的故事。</div>
+  <div class="hint">—— 纯文字 · 相遇 · Demo 0.4 ——</div>
+  <div class="title-actions">
+    <button class="btn primary" id="btnStart">开始</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="nameOverlay">
+  <div class="modal namebox">
+    <h2>如果有人叫你,你希望听见什么?</h2>
+    <div class="muted">一个普通的名字就好。这个名字,会被记住。</div>
+    <input id="nameInput" maxlength="12" placeholder="输入名字">
+    <div class="name-actions"><button class="btn primary" id="nameOk">开始</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="historyOverlay">
+  <div class="modal historybox">
+    <div class="modalhead"><div><h2>历史记录</h2><div class="muted">回看之前看过的内容</div></div><button class="btn" data-close>返回</button></div>
+    <div class="histlist" id="histlist"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   引擎 ENGINE —— 通用,与剧本内容无关
+   ===================================================================== */
+
+let game = {
+  name: "",
+  run: 0,           // 周目
+  scene: null,      // 当前场景 id
+  flags: {}         // 故事状态
+};
+
+let history = [];   // 历史记录(已看过的内容,可回看)
+
+const REDUCE_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let lineFull = "";
+let typeTimer = null;
+
+/* ---------- 场景工具 ---------- */
+function cur(){ return scenes[game.scene] || scenes.title; }
+function pick(sc, key){ // run>=2 时优先取 key+"2" 变体
+  if (game.run >= 2 && sc[key + "2"] != null) return sc[key + "2"];
+  return sc[key];
+}
+
+/* ---------- 渲染 ---------- */
+function goto(id){
+  if (id === "__pending__"){ id = game.pending || "title"; game.pending = null; }
+  game.scene = id;
+  pushHistory();
+  render();
+}
+
+function render(){
+  const sc = cur();
+  // 周目>=2 时优先取「字段名+2」的变体(见 pick)
+  const narration = pick(sc, "narration");
+  const who = pick(sc, "who");
+  const line = pick(sc, "line");
+  const next = pick(sc, "next");
+  const choices = pick(sc, "choices");
+
+  const stage = document.getElementById("stage");
+  stage.className = "mood-" + (sc.mood || "night");
+
+  document.getElementById("run").textContent = game.run > 0 ? ("周目 " + game.run) : "";
+  document.getElementById("chapter").textContent = sc.chapter || "";
+
+  // 旁白
+  const nar = document.getElementById("narration");
+  nar.innerHTML = "";
+  if (narration){
+    const d = document.createElement("div"); d.className = "reveal"; d.textContent = narration;
+    nar.appendChild(d);
+  }
+
+  // 说话人 + 台词
+  const whoEl = document.getElementById("who");
+  whoEl.textContent = "";
+  whoEl.className = "who";
+  if (who){
+    whoEl.textContent = who;
+    if (who === "你") whoEl.classList.add("self");
+    else if (who === "系统") whoEl.classList.add("sys");
+  }
+  typeLine(line || "");
+
+  // 选项 / 继续
+  const box = document.getElementById("choices"); box.innerHTML = "";
+  if (choices && choices.length){
+    choices.forEach(c => {
+      const b = document.createElement("button"); b.className = "choice";
+      b.textContent = c.label; b.onclick = () => onChoice(c); box.appendChild(b);
+    });
+  } else if (next){
+    const b = document.createElement("button"); b.className = "continue";
+    b.textContent = "继续"; b.onclick = advance; box.appendChild(b);
+  }
+
+  updateTitleButtons();
+}
+
+function typeLine(text){
+  lineFull = text || "";
+  const el = document.getElementById("line");
+  clearInterval(typeTimer); typeTimer = null;
+  el.classList.remove("typing");
+  el.textContent = "";
+  if (!text) return;
+  if (REDUCE_MOTION){ el.textContent = text; return; }
+  let i = 0;
+  el.classList.add("typing");
+  typeTimer = setInterval(() => {
+    i++;
+    el.textContent = text.slice(0, i);
+    if (i >= text.length){ finishTyping(); }
+  }, 26);
+}
+function finishTyping(){
+  if (typeTimer){ clearInterval(typeTimer); typeTimer = null; }
+  document.getElementById("line").classList.remove("typing");
+  document.getElementById("line").textContent = lineFull;
+}
+function advance(){
+  if (document.getElementById("line").classList.contains("typing")){ finishTyping(); return; }
+  const sc = cur();
+  const next = pick(sc, "next");
+  const choices = pick(sc, "choices");
+  if (next && !(choices && choices.length)) goto(next);
+}
+
+/* ---------- 选择 ---------- */
+function onChoice(c){
+  if (c.action){ doAction(c.action); return; }
+  goto(c.next);
+}
+
+function doAction(a){
+  if (a === "name") openName();
+  else if (a === "title") showTitle();
+  else if (a === "restart") newRun(game.name);
+}
+
+/* ---------- 新周目 ---------- */
+function newRun(name){
+  game.name = name;
+  game.run += 1;
+  game.flags = {};
+  history = [];
+  closeOverlays();
+  goto("s1");
+}
+
+/* ---------- 标题屏 ---------- */
+function showTitle(){
+  document.getElementById("stage").style.display = "none";
+  document.getElementById("titleScreen").classList.remove("hidden");
+  updateTitleButtons();
+}
+function showGame(){
+  document.getElementById("titleScreen").classList.add("hidden");
+  document.getElementById("stage").style.display = "";
+}
+function updateTitleButtons(){ /* 无存档版:标题屏无读档按钮 */ }
+
+/* ---------- 弹窗 ---------- */
+function closeOverlays(){ document.querySelectorAll(".overlay").forEach(x => x.classList.add("hidden")); }
+function openName(){ closeOverlays(); document.getElementById("nameOverlay").classList.remove("hidden");
+  setTimeout(() => document.getElementById("nameInput").focus(), 30); }
+function confirmName(){
+  const v = document.getElementById("nameInput").value.trim(); if (!v) return;
+  document.getElementById("nameInput").value = "";
+  showGame(); newRun(v);
+}
+
+/* ---------- 历史记录 ---------- */
+function pushHistory(){
+  if (game.scene === "title") return;
+  const sc = cur();
+  const narration = pick(sc, "narration");
+  const who = pick(sc, "who");
+  const line = pick(sc, "line");
+  if (!narration && !who && !line) return;
+  history.push({ chapter: sc.chapter || "", narration: narration || "", who: who || "", line: line || "" });
+}
+function openHistory(){ closeOverlays(); renderHistory(); document.getElementById("historyOverlay").classList.remove("hidden"); }
+function renderHistory(){
+  const el = document.getElementById("histlist"); el.innerHTML = "";
+  if (history.length === 0){
+    el.innerHTML = '<div class="muted" style="padding:24px;text-align:center">还没有任何记录。</div>';
+    return;
+  }
+  let lastChapter = "";
+  history.forEach(h => {
+    if (h.chapter && h.chapter !== lastChapter){
+      lastChapter = h.chapter;
+      const ch = document.createElement("div"); ch.className = "hist-ch"; ch.textContent = h.chapter; el.appendChild(ch);
+    }
+    const item = document.createElement("div"); item.className = "hist-item";
+    if (h.narration){
+      const n = document.createElement("div"); n.className = "hist-nar"; n.textContent = h.narration; item.appendChild(n);
+    }
+    if (h.who || h.line){
+      if (h.who){ const w = document.createElement("div"); w.className = "hist-who" + (h.who === "你" ? " self" : h.who === "系统" ? " sys" : ""); w.textContent = h.who; item.appendChild(w); }
+      if (h.line){ const l = document.createElement("div"); l.className = "hist-line"; l.textContent = h.line; item.appendChild(l); }
+    }
+    el.appendChild(item);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+/* ---------- 事件绑定 ---------- */
+document.getElementById("btnHistory").onclick = openHistory;
+document.getElementById("btnRestart").onclick = openName;
+document.getElementById("btnStart").onclick = () => { showGame(); openName(); };
+document.getElementById("nameOk").onclick = confirmName;
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = closeOverlays);
+// 点击对话框推进;键盘推进
+document.querySelector(".dialog").addEventListener("click", e => {
+  if (e.target.tagName === "BUTTON") return;
+  advance();
+});
+window.addEventListener("keydown", e => {
+  const nameOpen = !document.getElementById("nameOverlay").classList.contains("hidden");
+  if (nameOpen){ if (e.key === "Enter") confirmName(); return; }
+  const overlayOpen = document.querySelector(".overlay:not(.hidden)");
+  if (overlayOpen){ if (e.key === "Escape") closeOverlays(); return; }
+  if (!document.getElementById("titleScreen").classList.contains("hidden")) return;
+  const ae = document.activeElement;
+  if (ae && ae.tagName === "BUTTON") return; // 让按钮原生的 Enter/Space 生效,避免重复推进
+  if (e.key === " " || e.key === "Enter" || e.key === "ArrowRight"){ e.preventDefault(); advance(); }
+});
+
+/* =====================================================================
+   剧本 SCRIPT —— 内容层,后续可外置为 story.js
+   ===================================================================== */
+const scenes = {
+
+  /* ---------- 标题(仅占位,实际用 #titleScreen) ---------- */
+  title: { mood:"night", chapter:"", narration:"", who:"", line:"", choices:[] },
+
+  /* ================= 周目1 · 相遇 ================= */
+
+  s1: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"九月。\n雨刚停。\n整座城市还蒙着一层潮气,街灯在湿漉漉的地面上,晕开一小片一小片暖黄的光。\n你临时改了回家的路,拐进了便利店门口那条街。",
+    narration2:"九月。\n雨刚停。空气里那点潮湿的凉意,和记忆里一模一样。\n你临时改了回家的路,拐进便利店门口那条街——像已经走过一次。",
+    who:"", line:"", next:"s2"
+  },
+
+  s2: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"你低着头看手机,没看清路。\n推开玻璃门的一瞬间,你一头撞进了一个人怀里。\n先撞到的,是他身上那股很淡的、像被雨洗过的皂香。",
+    who:"你", line:"抱歉!",
+    next:"s2b"
+  },
+
+  s2b: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"他没有躲,也没有不耐烦。\n只是往后挪了半步,先确认你有没有站稳。",
+    who:"沈砚", line:"……没事。",
+    next:"s3"
+  },
+
+  s3: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"他低头看了一眼手里的饮料——还好,没洒——才重新看向你。\n目光在你脸上停了一下。",
+    narration2:"他低头看了一眼饮料——还好,没洒——才重新看向你。\n视线停住的那半秒,像有什么一闪而过。",
+    who:"沈砚", line:"你没撞疼吧?",
+    choices:[
+      { label:"没有。", next:"s4a", metaNext:{ switched:"s_switch", repeat:"s_repeat" } },
+      { label:"……有点疼。", next:"s4b", metaNext:{ switched:"s_switch", repeat:"s_repeat" } }
+    ]
+  },
+
+  s4a: { chapter:"09 · 相遇", mood:"rain", narration:"他像是松了口气,又把这口气咽了回去。", who:"沈砚", line:"嗯。", next:"s5" },
+  s4b: { chapter:"09 · 相遇", mood:"rain", narration:"他明显没料到这个回答,眉梢动了动。", who:"沈砚", line:"……那我赔你一瓶?", next:"s5" },
+
+  s5: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"他准备离开,转身要往路口走。\n你看着他的背影,那句话几乎要脱口而出。",
+    who:"", line:"",
+    choices:[
+      { label:"……算了。", next:"s6a" },
+      { label:"那个,等一下!", next:"s6b" }
+    ]
+  },
+
+  s6a: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"你没有开口,由着他走。\n可他走出去没两步,又停住了。",
+    who:"沈砚", line:"……你往哪边走?",
+    next:"s6a2"
+  },
+
+  s6a2: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"你朝路口的方向指了指。",
+    who:"", line:"", next:"s7"
+  },
+
+  s6b: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"话先于大脑出了口。\n他闻声回头,像有点意外。",
+    who:"你", line:"那个……",
+    next:"s6c"
+  },
+
+  s6c: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"你其实没想好要说什么。\n鬼使神差地,你指了指自己原本要去的方向。",
+    who:"沈砚", line:"……那边?",
+    next:"s7"
+  },
+
+  s7: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"他顺着你指的方向看过去。\n那个路口围着施工的围挡,黄黑相间的牌子,在刚下过雨的夜里格外扎眼。",
+    who:"沈砚", line:"……走这边。那边在修路。",
+    next:"s7b"
+  },
+
+  s7b: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"你跟上他。\n雨后的风从街角吹过来,带着一点潮湿的凉意。\n他走得不快,像是怕你跟丢;你落后几步,他就慢下来等。",
+    who:"", line:"", next:"s8"
+  },
+
+  s8: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"快到路口时,他停下来,抬手指了指对面。",
+    who:"沈砚", line:"到了。就送到这。",
+    choices:[
+      { label:"谢谢。", next:"s9a" },
+      { label:"……你叫什么?", next:"s9b" }
+    ]
+  },
+
+  s9a: { chapter:"09 · 相遇", mood:"rain", narration:"他别开脸,声音轻得像是不太习惯被道谢。", who:"沈砚", line:"……不用。", next:"s_end" },
+  s9b: { chapter:"09 · 相遇", mood:"rain", narration:"他顿了顿,才开口,像是临时决定告诉你。", who:"沈砚", line:"……沈砚。", next:"s_end" },
+
+  s_end: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"你们在便利店门口分开。\n你朝一个方向走,他朝另一个。\n走出几步,你鬼使神差地回了头——却发现他停在原地,正看着你离开的方向。",
+    narration2:"你们在便利店门口分开。\n你走出几步,鬼使神差地回了头——\n他停在原地,正看着你离开的方向。这一次,他看了很久,久到你几乎以为他认得你。",
+    who:"", line:"", next:"s_end2", next2:"teaser1"
+  },
+
+  s_end2: {
+    chapter:"09 · 相遇", mood:"night",
+    narration:"回家的路,和来时一样。\n只是你总觉得,身后有人看了你很久。",
+    who:"", line:"这是一个很普通的开始。\n至少,现在看起来是这样。",
+    choices:[ { label:"……", next:"r2_intro" } ]
+  },
+
+  r2_intro: {
+    chapter:"—— 夜晚 ——", mood:"night",
+    narration:"夜里,房间很安静。\n你想起白天便利店门口的那个人。\n想起他说「没事」的时候,先看了你一眼。",
+    who:"", line:"如果重新开始,一切都会回到那个九月的傍晚。",
+    choices:[ { label:"再次开始", action:"restart" } ]
+  },
+
+  /* ================= Meta 反应 ================= */
+
+  s_switch: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"他顿了一下。\n像是从很短的回忆里,翻出了什么对不上的地方。",
+    who:"沈砚", line:"……你刚才,好像不是这么说的。",
+    line2:"……又是这句。\n你刚才,不是这么说的。",
+    next:"__pending__"
+  },
+
+  s_repeat: {
+    chapter:"09 · 相遇", mood:"rain",
+    narration:"他语气很淡,像在说一件和自己无关的事。",
+    who:"沈砚", line:"……还是这句。\n你只会说这一句吗?",
+    next:"__pending__"
+  },
+
+  /* ================= 周目2 · teaser ================= */
+
+  teaser1: {
+    chapter:"09 · 相遇", mood:"glitch",
+    narration:"他站在原地,忽然抬起头,看向你离开的方向。\n又像是,看向了更外面的、屏幕这一边的什么。",
+    who:"沈砚", line:"……我们,是不是在哪儿见过?",
+    next:"teaser2"
+  },
+
+  teaser2: {
+    chapter:"——", mood:"glitch",
+    narration:"屏幕的边缘,似乎闪了一下。",
+    who:"系统", line:"检测到重复数据。",
+    next:"demoend"
+  },
+
+  demoend: {
+    chapter:"DEMO END", mood:"night",
+    narration:"", who:"",
+    line:"—— Demo 到此结束 ——\n\n正式版将扩展:\n多周目递进 · 名字差异 · 更多场景 · AFTER SAVE\n\n谢谢你,陪他走到这里。",
+    choices:[ { label:"回到标题", action:"title" } ]
+  }
+};
+
+/* =====================================================================
+   启动
+   ===================================================================== */
+updateTitleButtons();
+showTitle();
+</script>
+</body>
+</html>
