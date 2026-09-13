@@ -1,0 +1,1952 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>《SAVE》Demo 0.4 · 纯文字版</title>
+<style>
+:root{
+  --bg:#0b0e13; --ink:#e9edf2; --muted:#7f8997; --muted2:#9aa4b0;
+  --line:rgba(255,255,255,.12); --soft:rgba(255,255,255,.05);
+  --serif:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans)}
+button{font:inherit;color:inherit}
+.hidden{display:none!important}
+
+/* ===== 舞台 ===== */
+#stage{position:relative;min-height:100vh;display:flex;flex-direction:column;overflow:hidden;
+  background:linear-gradient(160deg,var(--m0,#0b0e13),var(--m1,#0f141a));
+  transition:background 1s ease}
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0}
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 90% at 50% 0%,transparent 55%,rgba(0,0,0,.5) 100%)}
+/* mood 配色 */
+.mood-rain{--m0:#0b1119;--m1:#16202e;--accent:#8fb6d0}
+.mood-night{--m0:#0b0d12;--m1:#1a120c;--accent:#d0b48a}
+.mood-store{--m0:#0f1419;--m1:#151b21;--accent:#aebccb}
+.mood-glitch{--m0:#0a0d12;--m1:#160f1a;--accent:#e08a8a}
+.mood-warmrain{--m0:#0d1115;--m1:#1b150f;--accent:#d0a96a}
+.mood-autumn{--m0:#100e0a;--m1:#1e1610;--accent:#d8a35c}
+.mood-frost{--m0:#0e1116;--m1:#1a2029;--accent:#a8c0d4}
+.mood-snow{--m0:#0d1015;--m1:#161c26;--accent:#cfd8e4}
+/* rain 纹理 */
+.mood-rain::before{opacity:.22;
+  background-image:linear-gradient(105deg,transparent 44%,rgba(160,200,230,.22) 50%,transparent 56%);
+  background-size:10px 16px;animation:rain 1.3s linear infinite}
+/* warmrain 纹理(夏夜暖雨) */
+.mood-warmrain::before{opacity:.18;
+  background-image:linear-gradient(105deg,transparent 44%,rgba(208,176,138,.18) 50%,transparent 56%);
+  background-size:10px 16px;animation:rain 1.3s linear infinite}
+@keyframes rain{from{background-position:0 0}to{background-position:-46px 130px}}
+/* glitch 扫描线 */
+.mood-glitch::before{opacity:.35;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px)}
+
+/* ===== 顶栏 ===== */
+.top{position:relative;z-index:2;height:58px;flex:none;display:flex;align-items:center;
+  justify-content:space-between;padding:0 26px;border-bottom:1px solid var(--line);
+  color:var(--muted);font-size:12px;letter-spacing:.28em}
+.top .logo{color:#fff;font-weight:600;letter-spacing:.4em}
+.topright{display:flex;align-items:center;gap:16px}
+.aff{display:flex;gap:9px;font-size:11px;letter-spacing:.06em}
+.aff span{color:var(--muted);opacity:.16;transition:opacity .5s,color .5s}
+.aff span[data-lv="1"]{opacity:.42}
+.aff span[data-lv="2"]{opacity:.68}
+.aff span[data-lv="3"]{opacity:1;color:#e7eaee}
+.top .run{letter-spacing:.14em}
+
+/* ===== 场景区 ===== */
+.scene{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;padding:0 clamp(20px,6vw,72px)}
+.chapter{margin:26px 0 0;color:var(--accent);font-size:12px;letter-spacing:.22em;min-height:1.2em}
+.narration{flex:1;display:flex;align-items:flex-start;justify-content:center;
+  max-width:720px;margin:44px auto 0;width:100%;text-align:left;
+  font-family:var(--serif);font-size:clamp(16px,1.9vw,19px);line-height:2.15;color:#d7dbe1;
+  white-space:pre-wrap;text-shadow:0 2px 18px rgba(0,0,0,.5)}
+.narration .reveal{animation:rise .7s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ===== 立绘(半身) ===== */
+.character{position:absolute;z-index:2;left:50%;bottom:300px;transform:translateX(-50%);
+  height:min(46vh,420px);max-width:min(46vh,80vw);object-fit:contain;object-position:center bottom;
+  filter:drop-shadow(0 16px 40px rgba(0,0,0,.5));transition:opacity .45s ease,transform .45s ease;
+  pointer-events:none}
+.character.hidden{opacity:0;transform:translateX(-50%) translateY(10px)}
+
+/* ===== 对话框 ===== */
+.dialog{flex:none;max-width:760px;width:100%;margin:0 auto 26px;position:relative;z-index:3;
+  background:linear-gradient(180deg,rgba(10,14,20,.82),rgba(8,11,16,.92));
+  border:1px solid var(--line);border-radius:16px;padding:20px 24px 16px;
+  box-shadow:0 22px 60px rgba(0,0,0,.55);backdrop-filter:blur(10px)}
+.who{font-size:13px;letter-spacing:.14em;color:var(--accent);margin-bottom:9px;min-height:1.2em}
+.who.self{color:#d9c9a8}
+.line{font-size:clamp(17px,2vw,19px);line-height:1.9;white-space:pre-wrap;min-height:60px;color:#eef1f5}
+.line.typing::after{content:"▍";opacity:.7;animation:blink 1s steps(2) infinite;margin-left:1px}
+@keyframes blink{50%{opacity:0}}
+.choices{display:grid;gap:9px;margin-top:14px}
+.choice,.continue{border:1px solid var(--line);background:var(--soft);color:#e7ebf0;border-radius:11px;
+  padding:12px 16px;text-align:left;cursor:pointer;transition:.18s;font-size:15px;line-height:1.6}
+.choice:hover,.continue:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3);transform:translateY(-1px)}
+.choice::before{content:"›";color:var(--accent);margin-right:10px}
+.continue{text-align:center;color:var(--muted2)}
+.continue::after{content:"▸";margin-left:8px}
+.controls{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;border-top:1px solid rgba(255,255,255,.06);padding-top:12px}
+.btn{border:1px solid var(--line);background:transparent;color:var(--muted2);border-radius:8px;
+  padding:7px 12px;font-size:12px;letter-spacing:.08em;cursor:pointer;transition:.15s}
+.btn:hover{background:var(--soft);color:#e7ebf0}
+
+/* ===== 标题屏 ===== */
+#titleScreen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;background:linear-gradient(160deg,#0b0d12,#17100d);padding:24px}
+#titleScreen .big{font-size:clamp(54px,11vw,104px);letter-spacing:.42em;font-weight:300;color:#f2f4f7}
+#titleScreen .sub{margin-top:22px;color:var(--muted);font-size:15px;letter-spacing:.2em;line-height:2}
+#titleScreen .hint{margin-top:10px;color:#6b7480;font-size:12px;letter-spacing:.12em}
+.title-actions{display:flex;gap:12px;margin-top:44px}
+.title-actions .btn{font-size:14px;padding:11px 26px;letter-spacing:.2em}
+
+/* ===== 弹窗 ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;
+  justify-content:center;padding:18px;z-index:20}
+.overlay.hidden{display:none}
+.modal{width:min(860px,100%);max-height:90vh;overflow:auto;background:#0c1118f2;border:1px solid var(--line);
+  border-radius:16px;box-shadow:0 30px 100px #000;padding:22px}
+.modalhead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:15px}
+.modal h2{font-weight:500;margin:0;font-size:18px;letter-spacing:.06em}
+.muted{color:#8f99a5;font-size:12px;line-height:1.7;margin-top:4px}
+.slots{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.slot{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);border-radius:11px;padding:11px;
+  display:grid;grid-template-columns:74px 1fr auto;gap:11px;align-items:center}
+.thumb{width:74px;height:48px;border-radius:7px}
+.slot strong{font-size:13px}
+.slot small{display:block;color:#929ba7;line-height:1.65;font-size:10px}
+.slot button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#e6e9ed;
+  border-radius:7px;padding:7px 10px;font-size:11px;cursor:pointer}
+.slot button:hover{background:rgba(255,255,255,.14)}
+.empty{opacity:.5}
+.namebox{width:min(430px,100%)}
+.namebox input{width:100%;margin-top:12px;background:#070a0e;border:1px solid rgba(255,255,255,.2);color:#fff;
+  border-radius:9px;padding:13px;outline:none;font-size:15px}
+.name-actions{display:flex;justify-content:flex-end;margin-top:14px}
+.primary{background:#e7eaee!important;color:#11151b!important;border-color:#e7eaee!important}
+
+/* ===== 历史记录 ===== */
+.historybox{width:min(720px,100%)}
+.histlist{max-height:64vh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding-right:6px}
+.hist-ch{color:var(--accent);font-size:11px;letter-spacing:.18em;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+.hist-ch:first-child{margin-top:0;padding-top:0;border-top:0}
+.hist-item{display:flex;flex-direction:column;gap:2px}
+.hist-nar{color:#9aa4b0;font-size:13px;line-height:1.7;white-space:pre-wrap}
+.hist-who{font-size:12px;letter-spacing:.12em;color:var(--accent);margin-top:6px}
+.hist-who.self{color:#d9c9a8}
+.hist-line{color:#e7ebf0;font-size:14px;line-height:1.75;white-space:pre-wrap}
+
+@media(max-width:640px){
+  .top{padding:0 16px}.scene{padding:0 14px}.chapter{margin-top:18px}
+  .dialog{margin:0 6px 14px;padding:16px 16px 13px}
+  .narration{font-size:16px}
+  .character{bottom:260px;height:34vh;max-width:70vw}
+  .slots{grid-template-columns:1fr}
+  .slot{grid-template-columns:64px 1fr}.thumb{width:64px;height:42px}
+  .slot>div:last-child{grid-column:2}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<div id="stage" class="mood-night">
+  <header class="top"><div class="logo">S A V E</div><div class="topright"><div class="aff" id="aff"></div><div class="run" id="run"></div></div></header>
+  <main class="scene">
+    <div class="chapter" id="chapter"></div>
+    <img class="character hidden" id="character" alt="沈砚">
+    <div class="narration" id="narration"></div>
+    <div class="dialog">
+      <div class="who" id="who"></div>
+      <div class="line" id="line"></div>
+      <div class="choices" id="choices"></div>
+      <div class="controls">
+        <button class="btn" id="btnSave">存档</button>
+        <button class="btn" id="btnLoad">读档</button>
+        <button class="btn" id="btnHistory">历史</button>
+        <button class="btn" id="btnRestart">重新开始</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="titleScreen" class="hidden">
+  <div class="big">SAVE</div>
+  <div class="sub">一个关于相遇,和记忆的故事。</div>
+  <div class="hint">—— 纯文字 · 相遇 · Demo 0.4 ——</div>
+  <div class="title-actions">
+    <button class="btn primary" id="btnStart">开始</button>
+    <button class="btn" id="btnTitleLoad">读档</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="nameOverlay">
+  <div class="modal namebox">
+    <h2>如果有人叫你,你希望听见什么?</h2>
+    <div class="muted">一个普通的名字就好。这个名字,会被记住。</div>
+    <input id="nameInput" maxlength="12" placeholder="输入名字">
+    <div class="name-actions"><button class="btn primary" id="nameOk">开始</button></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="historyOverlay">
+  <div class="modal historybox">
+    <div class="modalhead"><div><h2>历史记录</h2><div class="muted">回看之前看过的内容</div></div><button class="btn" data-close>返回</button></div>
+    <div class="histlist" id="histlist"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="saveOverlay">
+  <div class="modal">
+    <div class="modalhead"><div><h2>存档</h2><div class="muted">共 8 个存档位 · 覆盖不会影响其他档位</div></div><button class="btn" data-close>返回</button></div>
+    <div class="slots" id="saveSlots"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="loadOverlay">
+  <div class="modal">
+    <div class="modalhead"><div><h2>读档</h2><div class="muted" id="loadInfo">读取会回到保存时的场景。</div></div><button class="btn" data-close>返回</button></div>
+    <div class="slots" id="loadSlots"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   引擎 ENGINE —— 通用,与剧本内容无关
+   ===================================================================== */
+
+let game = {
+  name: "",
+  run: 0,           // 周目
+  scene: null,      // 当前场景 id
+  flags: {},        // 故事状态(随存档回滚)
+  nameMystery: true, // 男主是否尚未自报姓名(自报前姓名栏显示「???」)
+  // —— meta 记忆层:读档不回滚,只在「重新开始」时清空 ——
+  loadCount: 0,     // 本轮读档次数(只增不减)
+  saveCount: 0,
+  choiceHistory: {},// sceneId -> 已选 label 列表(用于「换选项」检测)
+  pending: null     // meta 反应之后要去往的后果场景
+};
+
+let history = [];   // 历史记录(已看过的内容,可回看)
+
+const KEY = "SAVE_DEMO_04";
+const MAX_SLOTS = 8;
+
+/* ---------- 存储 ---------- */
+function getSlots(){ try{ return JSON.parse(localStorage.getItem(KEY) || "[]"); }catch(e){ return []; } }
+function setSlots(x){ try{ localStorage.setItem(KEY, JSON.stringify(x)); }catch(e){} }
+function hasAnySave(){ return getSlots().some(Boolean); }
+
+const REDUCE_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const DEFAULT_EXPR = "expr_01.png"; // 男主默认表情(半身立绘)
+let lineFull = "";
+let typeTimer = null;
+
+/* ---------- 场景工具 ---------- */
+function cur(){ return scenes[game.scene] || scenes.title; }
+function pick(sc, key){ // run>=2 时优先取 key+"2" 变体
+  if (game.run >= 2 && sc[key + "2"] != null) return sc[key + "2"];
+  return sc[key];
+}
+function nextOf(sc){ // 支持按 flag 条件路由:{ if:"nameKnown", then:"a", else:"b" }
+  const n = pick(sc, "next");
+  if (n && typeof n === "object" && "if" in n){
+    return game.flags[n.if] ? n.then : (n.else || null);
+  }
+  return n;
+}
+function whoLabel(who){ // 姓名栏:主角显示输入名;男主自报姓名前显示「???」
+  if (who === "你") return game.name || "你";
+  if (who === "沈砚") return game.nameMystery ? "？？？" : "沈砚";
+  return who;
+}
+
+/* ---------- 好感度(轻量可见:出场后名字出现,好感越高越亮,不显示数字) ---------- */
+const AFF_ROWS = [["shen","沈砚",""],["lu","陆野","metLu"],["wen","温叙","metWen"],["xie","谢舟","metXie"]];
+function renderAff(){
+  const el = document.getElementById("aff"); if (!el) return;
+  el.innerHTML = "";
+  const aff = game.flags.aff || {};
+  AFF_ROWS.forEach(([key, name, metFlag]) => {
+    if (metFlag && !game.flags[metFlag]) return;
+    const lv = aff[key] || 0;
+    const s = document.createElement("span");
+    s.textContent = name;
+    if (lv > 0) s.dataset.lv = String(Math.min(lv, 3));
+    el.appendChild(s);
+  });
+}
+
+/* ---------- meta:换选项检测 ---------- */
+function metaSignal(sceneId, label){
+  const hist = game.choiceHistory[sceneId] || [];
+  if (hist.length === 0) return null;
+  if (hist.length >= 3) return "tired";
+  const last = hist[hist.length - 1];
+  if (last !== label) return "switched";
+  return "repeat";
+}
+function recordChoice(sceneId, label){
+  (game.choiceHistory[sceneId] = game.choiceHistory[sceneId] || []).push(label);
+}
+
+/* ---------- 渲染 ---------- */
+function goto(id){
+  if (id === "__pending__"){ id = game.pending || "title"; game.pending = null; }
+  game.scene = id;
+  const sc = cur();
+  if (sc.set){ Object.assign(game.flags, sc.set); }
+  if ("nameMystery" in sc) game.nameMystery = sc.nameMystery;
+  pushHistory();
+  render();
+}
+
+/* ---------- 存档快照 ---------- */
+function snapshot(){
+  const sc = cur();
+  return {
+    run: game.run, name: game.name, scene: game.scene,
+    flags: { ...game.flags }, nameMystery: game.nameMystery,
+    chapter: sc.chapter || "", mood: sc.mood || "night",
+    note: (sc.line || sc.narration || "").split("\n")[0].slice(0, 18) || "", time: Date.now()
+  };
+}
+
+function render(){
+  const sc = cur();
+  // 周目>=2 时优先取「字段名+2」的变体(见 pick)
+  const narration = pick(sc, "narration");
+  const who = pick(sc, "who");
+  const line = pick(sc, "line");
+  const next = nextOf(sc);
+  const choices = pick(sc, "choices");
+
+  const stage = document.getElementById("stage");
+  stage.className = "mood-" + (sc.mood || "night");
+
+  document.getElementById("run").textContent = game.run > 0 ? ("周目 " + game.run) : "";
+  document.getElementById("chapter").textContent = sc.chapter || "";
+
+  // 旁白
+  const nar = document.getElementById("narration");
+  nar.innerHTML = "";
+  if (narration){
+    const d = document.createElement("div"); d.className = "reveal"; d.textContent = narration;
+    nar.appendChild(d);
+  }
+
+  // 说话人 + 台词
+  const whoEl = document.getElementById("who");
+  whoEl.textContent = "";
+  whoEl.className = "who";
+  if (who){
+    whoEl.textContent = whoLabel(who);
+    if (who === "你") whoEl.classList.add("self");
+  }
+
+  // 立绘:沈砚说话时浮现,无台词淡出;场景可用 expr 字段指定不同表情
+  const char = document.getElementById("character");
+  const exprSrc = pick(sc, "expr") || (who === "沈砚" ? DEFAULT_EXPR : null);
+  if (exprSrc){
+    char.src = exprSrc;
+    char.classList.remove("hidden");
+  } else {
+    char.classList.add("hidden");
+  }
+
+  typeLine(line || "");
+
+  // 选项 / 继续
+  const box = document.getElementById("choices"); box.innerHTML = "";
+  if (choices && choices.length){
+    choices.forEach(c => {
+      const b = document.createElement("button"); b.className = "choice";
+      b.textContent = c.label; b.onclick = () => onChoice(c); box.appendChild(b);
+    });
+  } else if (next){
+    const b = document.createElement("button"); b.className = "continue";
+    b.textContent = "继续"; b.onclick = advance; box.appendChild(b);
+  }
+
+  updateTitleButtons();
+  renderAff();
+  positionCharacter();
+}
+
+// 立绘底部压在对话框上沿下方固定量,盖住图片底部的标注;对话框变高时自动上移
+function positionCharacter(){
+  const char = document.getElementById("character");
+  if (char.classList.contains("hidden")) return;
+  const scene = document.querySelector(".scene");
+  const dialog = document.querySelector(".dialog");
+  const N = 40; // 立绘底部压进对话框的像素量
+  const sceneBottom = scene.getBoundingClientRect().bottom;
+  const dialogTop = dialog.getBoundingClientRect().top;
+  char.style.bottom = Math.round(sceneBottom - dialogTop - N) + "px";
+}
+
+function typeLine(text){
+  lineFull = text || "";
+  const el = document.getElementById("line");
+  clearInterval(typeTimer); typeTimer = null;
+  el.classList.remove("typing");
+  el.textContent = "";
+  if (!text) return;
+  if (REDUCE_MOTION){ el.textContent = text; return; }
+  let i = 0;
+  el.classList.add("typing");
+  typeTimer = setInterval(() => {
+    i++;
+    el.textContent = text.slice(0, i);
+    if (i >= text.length){ finishTyping(); }
+  }, 26);
+}
+function finishTyping(){
+  if (typeTimer){ clearInterval(typeTimer); typeTimer = null; }
+  document.getElementById("line").classList.remove("typing");
+  document.getElementById("line").textContent = lineFull;
+}
+function advance(){
+  if (document.getElementById("line").classList.contains("typing")){ finishTyping(); return; }
+  const sc = cur();
+  const next = nextOf(sc);
+  const choices = pick(sc, "choices");
+  if (next && !(choices && choices.length)) goto(next);
+}
+
+/* ---------- 选择 ---------- */
+function onChoice(c){
+  if (c.aff){ game.flags.aff = game.flags.aff || {}; game.flags.aff[c.aff] = (game.flags.aff[c.aff] || 0) + 1; }
+  if (c.action){ doAction(c.action); return; }
+  if (c.metaNext){
+    const sig = metaSignal(game.scene, c.label);
+    recordChoice(game.scene, c.label);
+    if (sig && c.metaNext[sig]){ game.pending = c.next; goto(c.metaNext[sig]); return; }
+  }
+  goto(c.next);
+}
+
+function doAction(a){
+  if (a === "name") openName();
+  else if (a === "title") showTitle();
+  else if (a === "load") openLoad();
+  else if (a === "restart") newRun(game.name);
+}
+
+/* ---------- 新周目 ---------- */
+function newRun(name){
+  game.name = name;
+  game.run += 1;
+  game.loadCount = 0; game.saveCount = 0;
+  game.choiceHistory = {}; game.flags = {}; game.nameMystery = true; game.pending = null;
+  history = [];
+  closeOverlays();
+  goto("s1");
+}
+
+/* ---------- 标题屏 ---------- */
+function showTitle(){
+  document.getElementById("stage").style.display = "none";
+  document.getElementById("titleScreen").classList.remove("hidden");
+  updateTitleButtons();
+}
+function showGame(){
+  document.getElementById("titleScreen").classList.add("hidden");
+  document.getElementById("stage").style.display = "";
+}
+function updateTitleButtons(){
+  document.getElementById("btnTitleLoad").style.display = hasAnySave() ? "" : "none";
+}
+
+/* ---------- 弹窗 ---------- */
+function closeOverlays(){ document.querySelectorAll(".overlay").forEach(x => x.classList.add("hidden")); }
+function openName(){ closeOverlays(); document.getElementById("nameOverlay").classList.remove("hidden");
+  setTimeout(() => document.getElementById("nameInput").focus(), 30); }
+function confirmName(){
+  const v = document.getElementById("nameInput").value.trim(); if (!v) return;
+  document.getElementById("nameInput").value = "";
+  showGame(); newRun(v);
+}
+
+/* ---------- 历史记录 ---------- */
+function pushHistory(){
+  if (game.scene === "title") return;
+  const sc = cur();
+  const narration = pick(sc, "narration");
+  const who = pick(sc, "who");
+  const line = pick(sc, "line");
+  if (!narration && !who && !line) return;
+  history.push({ chapter: sc.chapter || "", narration: narration || "", who: who || "", line: line || "" });
+}
+function openHistory(){ closeOverlays(); renderHistory(); document.getElementById("historyOverlay").classList.remove("hidden"); }
+function renderHistory(){
+  const el = document.getElementById("histlist"); el.innerHTML = "";
+  if (history.length === 0){
+    el.innerHTML = '<div class="muted" style="padding:24px;text-align:center">还没有任何记录。</div>';
+    return;
+  }
+  let lastChapter = "";
+  history.forEach(h => {
+    if (h.chapter && h.chapter !== lastChapter){
+      lastChapter = h.chapter;
+      const ch = document.createElement("div"); ch.className = "hist-ch"; ch.textContent = h.chapter; el.appendChild(ch);
+    }
+    const item = document.createElement("div"); item.className = "hist-item";
+    if (h.narration){
+      const n = document.createElement("div"); n.className = "hist-nar"; n.textContent = h.narration; item.appendChild(n);
+    }
+    if (h.who || h.line){
+      if (h.who){ const w = document.createElement("div"); w.className = "hist-who" + (h.who === "你" ? " self" : ""); w.textContent = h.who; item.appendChild(w); }
+      if (h.line){ const l = document.createElement("div"); l.className = "hist-line"; l.textContent = h.line; item.appendChild(l); }
+    }
+    el.appendChild(item);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+/* ---------- 存档 / 读档 ---------- */
+function openSave(){ closeOverlays(); renderSlots("saveSlots", false); document.getElementById("saveOverlay").classList.remove("hidden"); }
+function openLoad(){
+  closeOverlays(); renderSlots("loadSlots", true);
+  document.getElementById("loadInfo").textContent = "读取会回到保存时的场景。";
+  document.getElementById("loadOverlay").classList.remove("hidden");
+}
+function thumbGrad(mood){
+  return {
+    rain:"linear-gradient(135deg,#0c1620,#27425c)", night:"linear-gradient(135deg,#12100c,#3a2c1c)",
+    store:"linear-gradient(135deg,#141a20,#263140)", glitch:"linear-gradient(135deg,#120c14,#4a2430)",
+    warmrain:"linear-gradient(135deg,#120e0c,#3a2c1c)"
+  }[mood] || "linear-gradient(135deg,#0c1118,#222a35)";
+}
+function fmtTime(t){ const d = new Date(t); return d.toLocaleString(); }
+function renderSlots(id, isLoad){
+  const el = document.getElementById(id); el.innerHTML = "";
+  const slots = getSlots();
+  for (let i = 0; i < MAX_SLOTS; i++){
+    const d = slots[i];
+    const wrap = document.createElement("div"); wrap.className = "slot" + (d ? "" : " empty");
+    const thumb = document.createElement("div"); thumb.className = "thumb";
+    thumb.style.background = d ? thumbGrad(d.mood) : "#171c24";
+    const info = document.createElement("div");
+    info.innerHTML = "<strong>存档 " + String(i + 1).padStart(2, "0") + "</strong>" +
+      (d ? "<small>" + (d.chapter || "—") + "<br>周目 " + d.run + " · " + fmtTime(d.time) + "<br>" + (d.note || "") + "</small>"
+         : "<small>空存档位</small>");
+    const actions = document.createElement("div");
+    if (isLoad && d){ const b = document.createElement("button"); b.textContent = "读取"; b.onclick = () => loadSlot(i); actions.appendChild(b); }
+    if (!isLoad){ const b = document.createElement("button"); b.textContent = d ? "覆盖" : "保存"; b.onclick = () => saveSlot(i); actions.appendChild(b); }
+    wrap.append(thumb, info, actions); el.appendChild(wrap);
+  }
+}
+function saveSlot(i){ const s = getSlots(); s[i] = snapshot(); setSlots(s); renderSlots("saveSlots", false); }
+function loadSlot(i){
+  const d = getSlots()[i]; if (!d) return;
+  game.run = d.run; game.name = d.name; game.scene = d.scene;
+  game.flags = { ...(d.flags || {}) };
+  game.nameMystery = !!d.nameMystery;
+  game.pending = null;
+  game.loadCount += 1;
+  closeOverlays();
+  render();
+}
+/* ---------- 事件绑定 ---------- */
+document.getElementById("btnSave").onclick = openSave;
+document.getElementById("btnLoad").onclick = openLoad;
+document.getElementById("btnHistory").onclick = openHistory;
+document.getElementById("btnRestart").onclick = openName;
+document.getElementById("btnStart").onclick = () => { showGame(); openName(); };
+document.getElementById("btnTitleLoad").onclick = () => { showGame(); openLoad(); };
+document.getElementById("nameOk").onclick = confirmName;
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = closeOverlays);
+// 点击对话框推进;键盘推进
+document.querySelector(".dialog").addEventListener("click", e => {
+  if (e.target.tagName === "BUTTON") return;
+  advance();
+});
+window.addEventListener("resize", positionCharacter);
+window.addEventListener("keydown", e => {
+  const nameOpen = !document.getElementById("nameOverlay").classList.contains("hidden");
+  if (nameOpen){ if (e.key === "Enter") confirmName(); return; }
+  const overlayOpen = document.querySelector(".overlay:not(.hidden)");
+  if (overlayOpen){ if (e.key === "Escape") closeOverlays(); return; }
+  if (!document.getElementById("titleScreen").classList.contains("hidden")) return;
+  const ae = document.activeElement;
+  if (ae && ae.tagName === "BUTTON") return; // 让按钮原生的 Enter/Space 生效,避免重复推进
+  if (e.key === " " || e.key === "Enter" || e.key === "ArrowRight"){ e.preventDefault(); advance(); }
+});
+
+/* =====================================================================
+   剧本 SCRIPT —— 内容层,后续可外置为 story.js
+   ===================================================================== */
+const scenes = {
+
+  /* ---------- 标题(仅占位,实际用 #titleScreen) ---------- */
+  title: { mood:"night", chapter:"", narration:"", who:"", line:"", choices:[] },
+
+  /* ================= 08月 · 相遇(夏夜雨中) ================= */
+
+  s1: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"八月。\n蝉鸣被雨声压下去,成了很低的底噪。\n\n这座城市,我还一点都不熟。\n搬来第三天,我叫不全楼下那些街的名字,也分不清,最后一班公交几点开走。\n\n今晚的雨下得没头没尾。我出来买点零食——出门时还嫌闷热,现在裤脚已经湿透了。",
+    line2:"八月。\n蝉鸣被雨声压下去,成了很低的底噪。\n\n这座城市,你还不熟。可这闷热的、下雨的夜,却像已经来过一次。",
+    next:"s2"
+  },
+
+  s2: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"便利店的灯白得发冷。我拎着袋子出来,顺着墙根拐弯。\n转角那一头,迎面撞上一个人。\n\n先撞上来的,是他肩上那股很淡的、被雨洗过的味道。\n手里的袋子脱了手,零食散了一地。",
+    next:"s2d"
+  },
+
+  s2d: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"你", line:"“抱歉!”",
+    next:"s2b"
+  },
+
+  s2b: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他没吭声,先往后让了半步。\n雨不大,但密。他的头发和肩头都蒙着一层细密的水雾,像是已经在雨里走了不短的一段路。",
+    next:"s2bd"
+  },
+
+  s2bd: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"沈砚", line:"“……没事。”",
+    next:"s2c"
+  },
+
+  s2c: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他说完,低头看了一眼散在地上的零食。\n顿了顿,他蹲下去,一包一包捡起来,码回袋子里,递还给你。",
+    next:"s3"
+  },
+
+  s3: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他直起身,视线才重新落到你身上。",
+    line2:"他直起身,视线重新落到你身上。\n停住的那半秒,像有什么一闪而过。",
+    next:"s3d"
+  },
+
+  s3d: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"沈砚", line:"“你没撞疼吧?”",
+    choices:[
+      { label:"“没有。”", next:"s4a", metaNext:{ switched:"s_switch", repeat:"s_repeat", tired:"s_silence" } },
+      { label:"“……有点疼。”", next:"s4b", metaNext:{ switched:"s_switch", repeat:"s_repeat", tired:"s_silence" } }
+    ]
+  },
+
+  s4a: { chapter:"08 · 相遇", mood:"warmrain", narration:"", who:"", line:"他像松了口气,又把这口气咽了回去。", next:"s4ad" },
+  s4ad: { chapter:"08 · 相遇", mood:"warmrain", who:"沈砚", line:"“嗯。”", next:"s5" },
+  s4b: { chapter:"08 · 相遇", mood:"warmrain", narration:"", who:"", line:"他看了你一会儿,像是在掂量这句话。眉梢动了动。", next:"s4bd" },
+  s4bd: { chapter:"08 · 相遇", mood:"warmrain", expr:"expr_06.png", who:"沈砚", line:"“……那我带你去医院?”", next:"s4be" },
+  s4be: { chapter:"08 · 相遇", mood:"warmrain", who:"你", line:"“不用了……我开玩笑的。”", next:"s4bf" },
+  s4bf: { chapter:"08 · 相遇", mood:"warmrain", narration:"", who:"", line:"他盯着你看了两秒,像是在确认你到底哪句是真的。\n然后,他几不可察地松了口气。", next:"s4bg" },
+  s4bg: { chapter:"08 · 相遇", mood:"warmrain", who:"沈砚", line:"“以后别开这种玩笑。”", next:"s5" },
+
+  s5: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他准备走,转身朝来的方向。\n走出两步,又停住了,盯着路口看了一会儿。",
+    next:"s5d"
+  },
+
+  s5d: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"沈砚", line:"“……前面在修路,封了。过不去。”",
+    next:"s5b"
+  },
+
+  s5b: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"你这才明白,他刚才为什么会从便利店这边绕过来。\n夜雨里的路口,黄黑相间的施工围挡若隐若现。\n\n这条街你不熟,可回家的方向,只有那一条。",
+    choices:[
+      { label:"“我……能跟你走一段吗?”", next:"s6b" },
+      { label:"“那我走另一边吧。”", next:"s6a" }
+    ]
+  },
+
+  s6a: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"你朝另一边指了指,想装作认识路。\n可你自己心里清楚,哪一边对你来说,都一样陌生。",
+    next:"s6ad"
+  },
+
+  s6ad: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"沈砚", line:"“那边有路灯。别走施工那条。”",
+    next:"s6a2"
+  },
+
+  s6a2: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"你应了一声,抬脚要走。\n可没走出两步,又停住了——面前的两条岔路,你一条也分不清。\n他像是叹了口气,又像没有。",
+    next:"s6a2d"
+  },
+
+  s6a2d: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"沈砚", line:"“……走吧。我顺路。”",
+    next:"s7"
+  },
+
+  s6b: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他像是没想到你会这么说,顿了一下。\n随后,他几不可察地点了下头,先一步迈进了雨里。",
+    next:"s6bd"
+  },
+
+  s6bd: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"沈砚", line:"“随你。”",
+    next:"s7"
+  },
+
+  s7: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"你们并排沿着墙根往前走。\n雨丝斜斜地扫过来,他走得不快,像在迁就你的步子。\n谁都没有说话,只有鞋底踩在积水上的声音,一下一下,和雨声叠在一起。\n绕过一条街,前面是一条更宽、更亮的路。",
+    next:"s7b"
+  },
+
+  s7b: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他停下来,朝前面抬了抬下巴。",
+    next:"s7bd"
+  },
+
+  s7bd: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"沈砚", line:"“到了。就送到这。”",
+    next:"s8"
+  },
+
+  s8: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"前面是一条很宽的马路,车灯在雨里拖成一条条光。\n你认出来了——这是这一带的主路。顺着它,总能走到你认识的地方。",
+    choices:[
+      { label:"“谢谢。”", next:"s9a" },
+      { label:"“……你叫什么?”", next:"s9b" }
+    ]
+  },
+
+  s9a: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    set:{ nameKnown:false },
+    narration:"",
+    who:"", line:"他别开脸,声音轻得像是很不习惯被道谢。",
+    next:"s9ad"
+  },
+
+  s9ad: {
+    chapter:"08 · 相遇", mood:"warmrain", expr:"expr_05.png",
+    who:"沈砚", line:"“……不用。”",
+    next:"s_end"
+  },
+
+  s9b: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    set:{ nameKnown:true },
+    narration:"",
+    who:"", line:"他顿了一下,才开口,像是临时决定告诉你。",
+    next:"s9bd"
+  },
+
+  s9bd: {
+    chapter:"08 · 相遇", mood:"warmrain", expr:"expr_06.png",
+    nameMystery:false,
+    who:"沈砚", line:"“……沈砚。”",
+    next:"s_end"
+  },
+
+  s_end: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"你们在路口分开。他朝一个方向,你朝另一个。\n走出几步,你鬼使神差地回头——却发现他停在原地,正看着你离开的方向。",
+    line2:"你们在路口分开。\n你走出几步,鬼使神差地回头——\n他停在原地,正看着你离开的方向。这一次,他看了很久,久到你几乎以为,他认得你。",
+    next:"s_end2", next2:"teaser1"
+  },
+
+  s_end2: {
+    chapter:"—— 八月之后 ——", mood:"night",
+    narration:"",
+    who:"", line:"那天晚上之后,你又路过几次那家便利店。\n没再遇见他。\n夏夜一点一点过去,蝉鸣淡下去,天气慢慢转凉。",
+    next:"m1"
+  },
+
+  /* ================= 09月 · 转学(重逢) ================= */
+
+  m1: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"九月。\n开学那天,你在走廊里找自己的班级。\n\n你转来这所学校不久。新的校服、新的课表、新的同学,一切都还没熟悉起来。",
+    next:{ if:"nameKnown", then:"m2b", else:"m2a" }
+  },
+
+  m2a: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"拐过走廊的拐角,你差点又撞上一个人。\n\n他背对着光,靠在窗边,低头看手机。\n是八月那个雨夜,便利店门口,你撞到的那个人。",
+    next:"m2ad"
+  },
+
+  m2ad: {
+    chapter:"09 · 转学", mood:"store",
+    who:"沈砚", line:"“……是你。”",
+    next:"m3a"
+  },
+
+  m3a: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"他认出你了。\n他收起手机,像是想了一会儿,忽然开口。",
+    next:"m3ad"
+  },
+
+  m3ad: {
+    chapter:"09 · 转学", mood:"store",
+    who:"沈砚", line:"“上次没来得及说。我叫沈砚。”",
+    nameMystery:false,
+    next:"m4"
+  },
+
+  m2b: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"拐过走廊的拐角,你差点又撞上一个人。\n\n他背对着光,靠在窗边,低头看手机。\n是八月那个雨夜,便利店门口的那个人。沈砚。",
+    next:"m2bd"
+  },
+
+  m2bd: {
+    chapter:"09 · 转学", mood:"store",
+    who:"沈砚", line:"“……是你。”",
+    next:"m4"
+  },
+
+  m4: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"他看着你,像是也没想到会在这里遇见。",
+    next:"m4d"
+  },
+
+  m4d: {
+    chapter:"09 · 转学", mood:"store",
+    who:"沈砚", line:"“你转来这所学校了?”",
+    next:"m4a"
+  },
+
+  m4a: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"他像是有点意外,又像有点高兴。那点高兴太淡,淡得他自己都没察觉,只在你眼里,像是神情软了一瞬。",
+    next:"m4ad"
+  },
+
+  m4ad: {
+    chapter:"09 · 转学", mood:"store",
+    who:"沈砚", line:"“刚转来,就撞见我?你运气不太好。”",
+    next:"m4ae"
+  },
+
+  m4ae: {
+    chapter:"09 · 转学", mood:"store",
+    who:"你", line:"“什么运气不太好?能遇见你,我运气明明挺好的。”",
+    next:"m4af"
+  },
+
+  m4af: {
+    chapter:"09 · 转学", mood:"store",
+    who:"沈砚", line:"“是吗。”",
+    next:"m5"
+  },
+
+  m5: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"你告诉他你被分到了哪个班。他听完,朝走廊另一头抬了抬下巴。",
+    next:"m5d"
+  },
+
+  m5d: {
+    chapter:"09 · 转学", mood:"store",
+    who:"沈砚", line:"“我在你隔壁班。”",
+    next:"m_end"
+  },
+
+  m_end: {
+    chapter:"09 · 转学", mood:"night",
+    narration:"",
+    who:"", line:"上课铃响了。他像要说什么,又咽了回去,只朝你点了一下头,转身回了教室。\n\n你这才想起,自己连教室的门,都还没找到。",
+    next:"m6"
+  },
+
+  m6: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"你找到自己的班,推门进去。\n老师朝你招招手,把你领到靠窗的一个空位。\n你坐下的时候,同桌的女生往边上让了让,把半张桌子腾给你。",
+    next:"m6d"
+  },
+
+  m6d: {
+    chapter:"09 · 转学", mood:"store",
+    who:"林晚", line:"“第一天都这样,慢慢就好了。”",
+    next:"m7"
+  },
+
+  m7: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"你转头看她。她对你笑了笑,没再追问什么,只报了自己的名字。",
+    next:"m7d"
+  },
+
+  m7d: {
+    chapter:"09 · 转学", mood:"store",
+    who:"林晚", line:"“我叫林晚。晚安的晚。”",
+    next:"m8"
+  },
+
+  m8: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"你也报了名字。\n正要再说话,书包带子扫到了后面那张桌子的练习册,摊开的本子滑到了地上。",
+    next:"m8d"
+  },
+
+  m8d: {
+    chapter:"09 · 转学", mood:"store",
+    set:{ metXie:true },
+    who:"谢舟", line:"“哎哎哎——我的练习册。新来的,你书包带子跟我本子有仇?”",
+    next:"m8e"
+  },
+
+  m8e: {
+    chapter:"09 · 转学", mood:"store",
+    who:"你", line:"“……我不是故意的。”",
+    next:"m8f"
+  },
+
+  m8f: {
+    chapter:"09 · 转学", mood:"store",
+    who:"谢舟", line:"“谅你初犯。捡起来,我就不跟你计较。”",
+    next:"m8g"
+  },
+
+  m8g: {
+    chapter:"09 · 转学", mood:"store",
+    who:"你", line:"“你自己不会捡?”",
+    next:"m8h"
+  },
+
+  m8h: {
+    chapter:"09 · 转学", mood:"store",
+    who:"谢舟", line:"“会啊。但谁碰掉的谁捡,这是原则。不然你下回把我笔袋也扫了,我找谁去?”",
+    next:"m9"
+  },
+
+  m9: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"林晚侧过身,凑到你耳边,用只有你们俩能听见的声音说。",
+    next:"m9d"
+  },
+
+  m9d: {
+    chapter:"09 · 转学", mood:"store",
+    who:"林晚", line:"“他叫谢舟。成绩好,就是话特别多。人不坏,嘴停不下来。”",
+    next:"m9e"
+  },
+
+  m9e: {
+    chapter:"09 · 转学", mood:"store",
+    who:"你", line:"“……看出来了。”",
+    next:"m10"
+  },
+
+  m10: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"你弯腰把练习册捡起来,拍回他桌上。\n他接过去,低头翻了两页,像在检查摔坏没有。",
+    next:"m10d"
+  },
+
+  m10d: {
+    chapter:"09 · 转学", mood:"store",
+    who:"谢舟", line:"“算你还有点良心。”",
+    next:"m11"
+  },
+
+  m11: {
+    chapter:"09 · 转学", mood:"store",
+    narration:"",
+    who:"", line:"你在他背后白了一眼。\n\n九月的第一天,就这么乱糟糟地开始了。",
+    next:"o1"
+  },
+
+  /* ================= 十月 · 熟稔 ================= */
+
+  o1: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"开学到现在,你差不多把这学校摸熟了。\n哪家食堂的饭便宜,哪条路去教学楼近,都门儿清。\n\n和沈砚,还是老样子。隔壁班,碰见点个头,话少。\n\n林晚成了你同桌,谢舟还坐你后面,三天两头跟你抬杠。",
+    next:"o2"
+  },
+
+  o2: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"周五轮到你值日,你抱着垃圾桶下楼,在楼梯口撞见他。\n他手里也拎着一个。",
+    next:"o2d"
+  },
+
+  o2d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"沈砚", line:"“你们班也今天倒垃圾。”",
+    next:"o2e"
+  },
+
+  o2e: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"你", line:"“嗯。”",
+    next:"o2f"
+  },
+
+  o2f: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"两个人并排往垃圾站走,都没说话。\n倒完各自回教室。\n\n你拐进走廊前回头看了一眼,他已经走远了。",
+    next:"lu1"
+  },
+
+  lu1: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"十月的体育课,两个班合上。\n你跑八百米,第三圈就喘不上气,慢慢落到了最后。\n一个男生从你身边超过去,又折了回来,倒着跑,冲你咧嘴笑。",
+    next:"lu1d"
+  },
+
+  lu1d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    set:{ metLu:true },
+    who:"陆野", line:"“喂,隔壁班的,新转来的吧?跑不动就慢慢来,又没人追你。”",
+    next:"lu2"
+  },
+
+  lu2: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"你", line:"“……我本来就在慢慢来。”",
+    next:"lu3"
+  },
+
+  lu3: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"陆野", line:"“那你还挺有自知之明。我叫陆野,跑得最快的那个陆野。”",
+    next:"lu4"
+  },
+
+  lu4: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他陪你跑完剩下的半圈,嘴没停过。\n“你转来多久了？”“哪个班的？”“食堂二楼的鸡排饭吃过没有？”\n\n你气都喘不匀,光顾着听。",
+    next:"lu4d"
+  },
+
+  lu4d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"陆野", line:"“下节体育课还合班,我教你打篮球?”",
+    next:"lu5d"
+  },
+
+  lu5d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"", line:"你看着他,张了张嘴。",
+    choices:[
+      { label:"“好啊。”", next:"lu6a", aff:"lu" },
+      { label:"“我打得很烂。”", next:"lu6b" }
+    ]
+  },
+
+  lu6a: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"陆野", line:"“就这么说定了,别放我鸽子。”",
+    next:"lu7"
+  },
+
+  lu6b: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"陆野", line:"“没事,谁都是烂过来的。不来也没事,我自己练。”",
+    next:"lu7"
+  },
+
+  lu7: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"下课铃响,他朝你挥挥手,跑没影了。",
+    next:"xie1"
+  },
+
+  xie1: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"下课,你趴在桌上补觉。\n后座的人用笔帽戳你后背,一下,又一下。",
+    next:"xie1d"
+  },
+
+  xie1d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"谢舟", line:"“喂,你数学作业写完没?写完借我看看。”",
+    next:"xie2"
+  },
+
+  xie2: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"你", line:"“你自己不是成绩挺好?”",
+    next:"xie2d"
+  },
+
+  xie2d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"谢舟", line:"“那不一样。我看你的,是怕你错得离谱,出去丢我的人。”",
+    next:"xie3d"
+  },
+
+  xie3d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"", line:"你把作业本往后一递。",
+    choices:[
+      { label:"“那你看吧。”", next:"xie4a", aff:"xie" },
+      { label:"“不要。”", next:"xie4b" }
+    ]
+  },
+
+  xie4a: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他一把抽走作业本,翻了两页。\n你趴回去,听见他在后面小声嘀咕“这题怎么想的”。",
+    next:"xie5"
+  },
+
+  xie4b: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"“小气。”他哼了一声,又用笔帽轻轻戳了你一下,这回没再说话。",
+    next:"xie5"
+  },
+
+  xie5: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"上课铃响,他把作业本放回你桌角。",
+    next:"o3"
+  },
+
+  o3: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"中午食堂人多,你排了半天才打上饭,端着盘子找座。\n一抬头就看见他,一个人坐在最里面那排,菜也没打多少。",
+    next:"o3d"
+  },
+
+  o3d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"", line:"你端着盘子,站了一下。",
+    choices:[
+      { label:"坐过去。", next:"o4a", aff:"shen" },
+      { label:"算了。", next:"o4b" }
+    ]
+  },
+
+  o4a: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"你在他对面坐下。\n他抬头看了你一眼,没说话,接着吃。",
+    next:"o4ad"
+  },
+
+  o4ad: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"沈砚", line:"“这儿没人坐?”",
+    next:"o4ae"
+  },
+
+  o4ae: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"你", line:"“现在有人了。”",
+    next:"o4af"
+  },
+
+  o4af: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他看了你两秒,低头扒饭。\n你才发现他吃得特别快,像在赶时间。",
+    next:"o4ag"
+  },
+
+  o4ag: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"沈砚", line:"“你不吃?”",
+    next:"o5"
+  },
+
+  o4b: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"你找了张空桌坐下。\n隔着几排,看见他吃完,端着盘子走了。\n\n走得挺快。",
+    next:"o5"
+  },
+
+  o5: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"十月的天,说变就变。\n放学时下起雨,你没带伞,站在教学楼门口看。",
+    next:"o5d"
+  },
+
+  o5d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"", line:"身后有人停住了。",
+    choices:[
+      { label:"“能一起走吗?”", next:"o6a" },
+      { label:"“没事,我等人。”", next:"o6b" }
+    ]
+  },
+
+  o6a: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他撑开伞,往你这边偏了一点。\n你们并排走,雨打在伞上,声音挺大。\n\n谁也没说话。",
+    next:"o6ad"
+  },
+
+  o6ad: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"沈砚", line:"“你没带伞。”",
+    next:"o6ae"
+  },
+
+  o6ae: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"你", line:"“忘了看天气预报。”",
+    next:"o6af"
+  },
+
+  o6af: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他“嗯”了一声。\n伞不大,你右肩淋到一点雨,他往你这边挪了挪。",
+    next:"wen1"
+  },
+
+  o6b: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他说了句“随你”,自己走了。\n\n你看着他走远,伞都没往自己那边偏。",
+    next:"wen1"
+  },
+
+  wen1: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"十月的某个下午,你去图书馆借一本书。\n那本书在书架最顶层,你踮着脚,指尖也够不到。\n旁边伸过来一只手,把书抽下来,轻轻放到你手边。",
+    next:"wen1d"
+  },
+
+  wen1d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    set:{ metWen:true },
+    who:"温叙", line:"“这本?”",
+    next:"wen2"
+  },
+
+  wen2: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"你", line:"“……谢谢。”",
+    next:"wen3"
+  },
+
+  wen3: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他点点头。转身前,视线扫过你手里的书,像是认得。",
+    next:"wen3d"
+  },
+
+  wen3d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"温叙", line:"“这本不错。”",
+    next:"wen4d"
+  },
+
+  wen4d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"", line:"他看着你,像在等你说什么。",
+    choices:[
+      { label:"“你也看过?”", next:"wen5a", aff:"wen" },
+      { label:"没说话,目送他走。", next:"wen5b" }
+    ]
+  },
+
+  wen5a: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他停了一下,说看过。\n你们就着那本书聊了几句,都不长。临走他朝你点一下头,很轻。",
+    next:"wen6"
+  },
+
+  wen5b: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"你抱着书,看他走远。\n他始终没回头。",
+    next:"wen6"
+  },
+
+  wen6: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"你抱着书去了自习区,找了个靠窗的位置坐下。",
+    next:"o7"
+  },
+
+  o7: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"后来你们有时候一起去图书馆。\n说是自习,其实就是各坐各的,一坐一下午。\n\n有一回你抬头,正好对上他的视线。\n两个人又都飞快别开。",
+    next:"o7d"
+  },
+
+  o7d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"沈砚", line:"“看什么。”",
+    next:"o8"
+  },
+
+  o8: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"社团招新那天,走廊挤满了人。\n你路过他们班门口,看见他被几个学长围着,在笑,应得挺快。\n\n可你觉得,他好像只想赶紧走。",
+    next:"o8d"
+  },
+
+  o8d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"沈砚", line:"“你站这儿干嘛。”",
+    next:"o8e"
+  },
+
+  o8e: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"你", line:"“路过。”",
+    next:"o8f"
+  },
+
+  o8f: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"他走过来,很自然地挡在你和那几个人中间。\n\n你愣了一下。",
+    next:"o9"
+  },
+
+  o9: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"放学你在校门口等公交,他也站那儿。\n车来了,你们上了同一路。",
+    next:"o9d"
+  },
+
+  o9d: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"你", line:"“你坐几站?”",
+    next:"o9e"
+  },
+
+  o9e: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    who:"沈砚", line:"“到终点。”",
+    next:"o9f"
+  },
+
+  o9f: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"然后就没话了。\n车上人不多,他靠着窗看外面。\n\n你坐他前面,从车窗反光里,能看见他的侧脸。",
+    next:"o10"
+  },
+
+  o10: {
+    chapter:"10 · 熟稔", mood:"autumn",
+    narration:"",
+    who:"", line:"十月底,天明显凉了。\n\n你发现一件事——不知道从哪天起,你下课会不自觉地,往某个方向瞟。\n\n有时是隔壁班的门口,有时是篮球场,有时是图书馆。\n\n你跟自己说,只是习惯了。",
+    next:"n1"
+  },
+
+  /* ================= 十一月 · 降温 ================= */
+
+  n1: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"十一月,天一下子冷了下来。\n风变得很硬,吹在脸上有点疼。\n\n你和沈砚之间,好像比秋天更近了一点,又好像,始终隔着什么。",
+    next:"n2"
+  },
+
+  n2: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"那天放学,你在校门口等车,冻得缩着脖子。\n他走过来,把外套脱下来递给你。",
+    next:"n2d"
+  },
+
+  n2d: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“穿上。”",
+    next:"n2e"
+  },
+
+  n2e: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"你", line:"“你自己不冷吗?”",
+    next:"n2f"
+  },
+
+  n2f: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“我不怕冷。”",
+    next:"n2g"
+  },
+
+  n2g: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"他语气很淡,像在说一件再普通不过的事。\n你接过外套,闻到上面有很淡的、洗衣粉的味道。",
+    next:"n3"
+  },
+
+  n3: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"期中考试前,你抱着书在图书馆泡了一整周。\n有天晚上,他推门进来,看见你,在你对面坐了下来。",
+    next:"n3d"
+  },
+
+  n3d: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"", line:"你们谁都没先开口。",
+    choices:[
+      { label:"“一起复习?”", next:"n4a" },
+      { label:"“你也来图书馆?”", next:"n4b" }
+    ]
+  },
+
+  n4a: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"他没答话,只是把书摊开。\n于是你们就这么并排坐着,各看各的,偶尔交换一句。",
+    next:"n4ad"
+  },
+
+  n4ad: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“这一步,你写错了。”",
+    next:"n4ae"
+  },
+
+  n4ae: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"你", line:"“你还会讲题。”",
+    next:"n4af"
+  },
+
+  n4af: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"他瞥你一眼,把你的草稿纸抽过去,低头改掉那一步。\n他的字很清瘦,像他的人。",
+    next:"n5"
+  },
+
+  n4b: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"他“嗯”了一声,没再多说什么。\n你们隔着一张桌子各看各的,安静得只剩翻书的声音。",
+    next:"n5"
+  },
+
+  n5: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"文化祭要到了,整个年级都被拉去布置。\n你忙完自己班的活去找水,路过他们班门口,看见他站在一堆彩带和吵闹的人声里。\n\n他脸上挂着一点很淡的笑,和每个跟他搭话的人应着。\n可你知道,那笑没到眼睛里。",
+    next:"n5d"
+  },
+
+  n5d: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“站门口做什么。”",
+    next:"n5e"
+  },
+
+  n5e: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"你", line:"“你好像很累。”",
+    next:"n5f"
+  },
+
+  n5f: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“还好。”",
+    next:"n5g"
+  },
+
+  n5g: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"他说“还好”的时候,垂下了眼,像是不想让人看见。\n你忽然很想问,你到底在累什么。\n可那句话卡在喉咙里,没问出口。",
+    next:"n6"
+  },
+
+  n6: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"那天傍晚,你上天台收东西,看见他一个人坐在那里。\n夕阳把他的影子拉得很长。\n\n他没有发现你。\n卸下了所有表情的他,看起来很安静,安静得,像随时会散进风里。",
+    next:"n6d"
+  },
+
+  n6d: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“你什么时候上来的。”",
+    next:"n6e"
+  },
+
+  n6e: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"你", line:"“刚来。你一个人待多久了?”",
+    next:"n6f"
+  },
+
+  n6f: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“没多久。”",
+    next:"n6g"
+  },
+
+  n6g: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"你们并肩站着,谁都没再说话。\n风很大,把他的头发吹乱了一点。\n\n那一刻你忽然觉得,这个人,可能从来没有真的轻松过。",
+    next:"n7"
+  },
+
+  n7: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"文化祭那天,人特别多。\n你想去找他,在人群里被人撞了一下,差点摔倒。\n他扶住你,却在你道谢的时候,冷冷说了一句。",
+    next:"n7d"
+  },
+
+  n7d: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“这种时候就别来找我了。”",
+    next:"n7e"
+  },
+
+  n7e: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"你愣在原地,看着他转身走开。\n那句“别来找我”,像一根针,扎得你半天没缓过来。",
+    next:"n7f"
+  },
+
+  n7f: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"", line:"他的背影越来越远。",
+    choices:[
+      { label:"追上去问清楚。", next:"n8a" },
+      { label:"算了,不勉强。", next:"n8b" }
+    ]
+  },
+
+  n8a: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"你追了上去,在楼梯拐角叫住他。",
+    next:"n8ad"
+  },
+
+  n8ad: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"你", line:"“沈砚,你刚才那句话是什么意思?”",
+    next:"n8ae"
+  },
+
+  n8ae: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“就是字面意思。”",
+    next:"n8af"
+  },
+
+  n8af: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"你", line:"“我不信。”",
+    next:"n8ag"
+  },
+
+  n8ag: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"他僵了一下。\n过了几秒,才低低地说了一句。",
+    next:"n8ah"
+  },
+
+  n8ah: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“……人一多,我就容易,说错话。”",
+    next:"n9"
+  },
+
+  n8b: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"你没有追。\n只是站在原地,看着他的背影淹没进人群里。\n\n那天剩下的时间,你都在想,那句话到底是不是你的错。",
+    next:"n9"
+  },
+
+  n9: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"第二天,他居然在你教室门口等你。\n见你出来,递过来一瓶水,语气有点不自然。",
+    next:"n9d"
+  },
+
+  n9d: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“昨天……我说话太重了。”",
+    next:"n9e"
+  },
+
+  n9e: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"你", line:"“你知道重还那样说。”",
+    next:"n9f"
+  },
+
+  n9f: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“人多的地方,我有时候控制不住。”",
+    next:"n9g"
+  },
+
+  n9g: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"他说得含糊,像是不想解释太多。\n可你听出来了——这不是第一次。\n他好像,一直都很累。",
+    next:"n10"
+  },
+
+  n10: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"很久之后你才知道,那种累,不是一天两天攒下的。\n\n他偶尔会盯着某处出神,会下意识地,和人群保持一点距离。\n像是有什么东西,让“和别人待在一起”这件事,本身就很耗力气。\n\n你没问。\n有些事,他不说,你就不逼。",
+    next:"n10d"
+  },
+
+  n10d: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“你为什么,总在我身边转。”",
+    next:"n10e"
+  },
+
+  n10e: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"你", line:"“因为……想啊。”",
+    next:"n10f"
+  },
+
+  n10f: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"他看了你很久,久到你以为自己说错了什么。\n最后他移开眼,声音很轻。",
+    next:"n10g"
+  },
+
+  n10g: {
+    chapter:"11 · 降温", mood:"frost",
+    who:"沈砚", line:"“会累的。”",
+    next:"n11"
+  },
+
+  n11: {
+    chapter:"11 · 降温", mood:"frost",
+    narration:"",
+    who:"", line:"那句话,你听懂了,又像没听懂。\n\n十一月快过去了。\n天冷得越来越厉害,你对他的在意,也越来越藏不住。\n\n你想,等哪天,一定要把这句话问明白。\n只是没想到,这一等,就等到了冬天。",
+    next:"w1"
+  },
+
+  /* ================= 十二月 · 未言 ================= */
+
+  w1: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"十二月。\n这座城市的第一场雪,下得毫无征兆。\n\n你和沈砚之间,已经近得,只差一句话。\n可那句话,谁都没有先说。",
+    next:"w2"
+  },
+
+  w2: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"那天晚上,你和他一起走出教学楼。\n雪落下来,很轻,落在他肩头,很快就化了。",
+    next:"w2d"
+  },
+
+  w2d: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"你", line:"“下雪了。”",
+    next:"w2e"
+  },
+
+  w2e: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"沈砚", line:"“嗯。”",
+    next:"w2f"
+  },
+
+  w2f: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"他抬头看雪,侧脸被路灯照得很柔和。\n你看着他,忽然觉得,这个冬天,好像也没有那么冷了。",
+    next:"w3"
+  },
+
+  w3: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"年末的校园,到处是聚会和热闹。\n他更沉默了些,像是不太愿意掺和这些。\n\n有天你听见他接了个电话,声音很低,只说了句“今年,不回去了”。",
+    next:"w3d"
+  },
+
+  w3d: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"你", line:"“你寒假……回家吗?”",
+    next:"w3e"
+  },
+
+  w3e: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"沈砚", line:"“不回。”",
+    next:"w3f"
+  },
+
+  w3f: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"他没解释。\n你也没再问。\n\n只是那一刻,你隐约觉得,他身后的那扇门,比你以为的,关得更紧。",
+    next:"w4"
+  },
+
+  w4: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"跨年前夜,你在街上遇见他。\n他一个人站在路灯下,呼出的白气,在冷空气里散开。",
+    next:"w4d"
+  },
+
+  w4d: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"你", line:"“你怎么一个人在这儿?”",
+    next:"w4e"
+  },
+
+  w4e: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"沈砚", line:"“屋里闷。”",
+    next:"w4f"
+  },
+
+  w4f: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"你们并肩往前走。\n街边的店里传出喧闹,更衬得这条巷子安静。",
+    next:"w5"
+  },
+
+  w5: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"走到一处广场,人群已经开始倒数。\n你侧过头看他,心跳快得有点发慌。\n\n有些话,你憋了一个秋天,一个冬天。\n现在,好像到了该说的时候。",
+    next:"w5d"
+  },
+
+  w5d: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"", line:"你攥紧了袖口。",
+    choices:[
+      { label:"开口。把话说出来。", next:"w6a" },
+      { label:"还是,算了吧。", next:"w6b" }
+    ]
+  },
+
+  w6a: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"你张了张嘴。\n“沈砚,我——”\n\n倒数正好归零,人群爆发出欢呼。\n烟花在头顶炸开,把你的后半句话,吞了个干净。",
+    next:"w6ad"
+  },
+
+  w6ad: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"你", line:"“我……新年快乐。”",
+    next:"w6ae"
+  },
+
+  w6ae: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"沈砚", line:"“新年快乐。”",
+    next:"w6af"
+  },
+
+  w6af: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"他看着你,像是想说什么。\n最后也只是,把围巾往上拉了拉。",
+    next:"w7"
+  },
+
+  w6b: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"你最终,还是把那句话咽了回去。\n\n说出来会怎样,你不知道。\n你只知道,现在的他,像是随时会退开。",
+    next:"w6bd"
+  },
+
+  w6bd: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"人群倒数到零,烟花在天上炸开。\n你们谁也没说话,就这么看着。",
+    next:"w7"
+  },
+
+  w7: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"回家的路上,雪又下起来。\n他送你到路口,停下。\n\n你想,再不说,就真的没有机会了。\n可他先开了口。",
+    next:"w7d"
+  },
+
+  w7d: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"沈砚", line:"“就到这吧。路上小心。”",
+    next:"w7e"
+  },
+
+  w7e: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"你", line:"“沈砚。”",
+    next:"w7f"
+  },
+
+  w7f: {
+    chapter:"12 · 未言", mood:"snow",
+    who:"沈砚", line:"“嗯?”",
+    next:"w7g"
+  },
+
+  w7g: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"那句在喉咙里滚了一个冬天的话,到底还是没能说出来。\n\n你看着他转身,走进雪里。\n影子被路灯拉长,又一点点,消失不见。\n\n你站在原地,忽然觉得,这个冬天,冷得让人发慌。",
+    next:"w8"
+  },
+
+  w8: {
+    chapter:"12 · 未言", mood:"snow",
+    narration:"",
+    who:"", line:"后来你想,如果那天,你把那句话说了,一切会不会不一样。\n\n可没有如果。\n\n那句话,被留在了那场雪里。\n和你的勇气一起。",
+    next:"demoend"
+  },
+
+  /* ================= Meta 反应 ================= */
+
+  s_switch: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他顿了一下。\n像是从很短的回忆里,翻出了什么对不上的地方。",
+    next:"s_switchd"
+  },
+
+  s_switchd: {
+    chapter:"08 · 相遇", mood:"warmrain", expr:"expr_06.png",
+    who:"沈砚", line:"“……你刚才,好像不是这么说的。”",
+    line2:"“……又是这句。\n你刚才,不是这么说的。”",
+    next:"__pending__"
+  },
+
+  s_repeat: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他语气很淡,像在说一件和自己无关的事。",
+    next:"s_repeatd"
+  },
+
+  s_repeatd: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    who:"沈砚", line:"“……还是这句。\n你只会说这一句吗?”",
+    next:"__pending__"
+  },
+
+  s_silence: {
+    chapter:"08 · 相遇", mood:"warmrain",
+    narration:"",
+    who:"", line:"他看了你很久,没有说话。\n久到,雨声都显得清晰起来。",
+    expr:"expr_01.png",
+    next:"__pending__"
+  },
+
+  /* ================= 周目2 · teaser ================= */
+
+  teaser1: {
+    chapter:"08 · 相遇", mood:"glitch",
+    narration:"",
+    who:"", line:"他站在原地,忽然抬起头,看向你离开的方向。\n像是隔着雨,在确认一个他自己也说不清的东西。",
+    next:"teaser1d"
+  },
+
+  teaser1d: {
+    chapter:"08 · 相遇", mood:"glitch", expr:"expr_06.png",
+    who:"沈砚", line:"“……我们,是不是在哪儿见过?”",
+    next:"s_end2"
+  },
+
+  demoend: {
+    chapter:"一周目 · 完", mood:"snow",
+    narration:"", who:"",
+    line:"—— 一周目 · 完 ——\n\n那句没说出口的话,被留在了那年冬天。\n\n要再试一次吗?\n也许,换一个选择,结局会不一样。",
+    choices:[ { label:"回到标题", action:"title" } ]
+  }
+};
+
+/* =====================================================================
+   启动
+   ===================================================================== */
+updateTitleButtons();
+showTitle();
+</script>
+</body>
+</html>
